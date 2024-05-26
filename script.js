@@ -59,6 +59,7 @@ function populateTableAndAccordion(channels) {
 
         const accordionItem = document.createElement('div');
         accordionItem.classList.add('accordion-item');
+        accordionItem.setAttribute('data-channel-name', channelName.toLowerCase());
         accordionItem.innerHTML = `
             <h2 class="accordion-header" id="heading${index}">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}" aria-expanded="false" aria-controls="collapse${index}">
@@ -176,15 +177,18 @@ function calculateGrade(channel) {
 }
 
 document.getElementById('teamFilterInput').addEventListener('keyup', function () {
-    filterTable();
+    filterTableAndAccordion();
 });
 
-function filterTable() {
+function filterTableAndAccordion() {
     const input = document.getElementById('teamFilterInput');
     const filter = input.value.toLowerCase();
     const table = document.getElementById('dataTable');
     const rows = table.getElementsByTagName('tr');
+    const accordion = document.getElementById('accordion');
+    const accordionItems = accordion.getElementsByClassName('accordion-item');
 
+    // Filter table rows
     for (let i = 1; i < rows.length; i++) { // Start at 1 to skip header row
         const cells = rows[i].getElementsByTagName('td');
         const channelName = cells[0].textContent.toLowerCase();
@@ -195,8 +199,19 @@ function filterTable() {
             rows[i].style.display = 'none';
         }
     }
-}
 
+    // Filter accordion items
+    for (let i = 0; i < accordionItems.length; i++) {
+        const accordionItem = accordionItems[i];
+        const channelName = accordionItem.getAttribute('data-channel-name');
+
+        if (channelName.includes(filter)) {
+            accordionItem.style.display = '';
+        } else {
+            accordionItem.style.display = 'none';
+        }
+    }
+}
 
 // Function to make table columns sortable
 function makeTableSortable() {
@@ -240,7 +255,41 @@ function makeTableSortable() {
             rows.forEach(row => {
                 table.querySelector('tbody').appendChild(row);
             });
+
+            // Sort accordion items in the same order as table rows
+            sortAccordionItems(rows, columnIndex, direction);
         });
+    });
+}
+
+// Function to sort accordion items based on table sorting
+function sortAccordionItems(sortedRows, columnIndex, direction) {
+    const accordion = document.getElementById('accordion');
+    const accordionItems = Array.from(accordion.getElementsByClassName('accordion-item'));
+
+    // Extract channel names from sorted table rows
+    const sortedChannelNames = sortedRows.map(row => row.cells[0].textContent.trim().toLowerCase());
+
+    // Sort accordion items based on sorted channel names
+    accordionItems.sort((a, b) => {
+        const aChannelName = a.getAttribute('data-channel-name');
+        const bChannelName = b.getAttribute('data-channel-name');
+        const aIndex = sortedChannelNames.indexOf(aChannelName);
+        const bIndex = sortedChannelNames.indexOf(bChannelName);
+
+        if (direction === 'asc') {
+            return aIndex - bIndex;
+        } else {
+            return bIndex - aIndex;
+        }
+    });
+
+    // Clear existing accordion items
+    accordion.innerHTML = '';
+
+    // Append sorted accordion items to the accordion
+    accordionItems.forEach(item => {
+        accordion.appendChild(item);
     });
 }
 

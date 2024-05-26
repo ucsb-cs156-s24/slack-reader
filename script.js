@@ -55,7 +55,7 @@ function populateTableAndAccordion(channels) {
 
         const logsHtml = channel.logs.map(log => `
             <h6>File: ${log.file}</h6>
-            <pre>${JSON.stringify(log.content, null, 2)}</pre>
+            <pre>${wrapHtml(log.content)}</pre> <!-- Escaping HTML here -->
         `).join('');
 
         const accordionItem = document.createElement('div');
@@ -139,19 +139,26 @@ function formatMessageCounts(users) {
 
 // Filter functions
 function messageFilter(message) {
-    return message.text && message.text.length > 1;
+    return message.text && message.text.length > 0;
 }
 
 function mergedFilter(message) {
-    return message.text && message.text.includes("merged");
+    const regex = /PR\s.*\smerged\s:\white_check_mark\:/i;
+    return message.text && regex.test(message.text);
 }
 
 function closedFilter(message) {
-    return message.text && message.text.includes("closed");
+    // Regular expression pattern to match either "was merged" or "was :x: closed but not merged!"
+    const pattern = /was\s*(merged|:x:\s*closed but not merged)/i;
+    return message.text && pattern.test(message.text);
 }
 
 function reflectionFilter(message) {
-    return message.reply_count && message.reply_count > 1;
+    // Regular expression pattern to match reflection bot messages
+    const pattern = /:thinking_face: Hello from reflection bot! :thinking_face:\s*(PR\s.*?(?=\s*(was\s*merged|:x:\s*closed but not merged)))/i;
+
+    // Check if the message text matches the pattern and if there is at least one reply
+    return message.text && pattern.test(message.text) && message.reply_count && message.reply_count >= 1;
 }
 
 function calculateGrade(channel) {
@@ -160,3 +167,35 @@ function calculateGrade(channel) {
 }
 
 
+// Input field keyup event listener for dynamic filtering
+document.getElementById('teamFilterInput').addEventListener('keyup', function () {
+    filterTable();
+});
+
+function filterTable() {
+    const input = document.getElementById('teamFilterInput').value.toLowerCase();
+    const rows = document.getElementById('dataTable').getElementsByTagName('tr');
+
+    for (let i = 1; i < rows.length; i++) {
+        const channelName = rows[i].getElementsByTagName('td')[0].textContent.toLowerCase();
+        if (channelName.includes(input)) {
+            rows[i].style.display = "";
+        } else {
+            rows[i].style.display = "none";
+        }
+    }
+}
+
+function wrapHtml(content) {
+    // Convert the content to a JSON string and escape HTML special characters
+    const jsonString = JSON.stringify(content);
+    return jsonString.replace(/[&<>"']/g, function (match) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[match];
+    });
+}

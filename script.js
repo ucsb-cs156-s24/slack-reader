@@ -175,7 +175,7 @@ function reflectionFilter(message) {
 
 function calculateGrade(channel) {
     const denominator = (channel.mergedCount * 2) + channel.closedCount;
-    return denominator > 0 ? channel.reflectionCount / denominator : 0;
+    return denominator > 0 ? channel.reflectionCount * 100 / denominator : 0;
 }
 
 

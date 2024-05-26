@@ -1,7 +1,6 @@
 const userIdToName = {};
 
 function wrapHtml(content) {
-    // Convert the content to a JSON string and escape HTML special characters
     const jsonString = JSON.stringify(content);
     return jsonString.replace(/[&<>"']/g, function (match) {
         return {
@@ -15,7 +14,6 @@ function wrapHtml(content) {
 }
 
 function processMessages(messages, channel, userIdToName) {
-    //Check that messages sum up to counts of individual messages by user
     messages.forEach(message => {
         if (messageFilter(message)) {
             channel.messageCount++;
@@ -47,8 +45,6 @@ function populateTableAndAccordion(channels) {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${channelName}</td>
-            <td>${channel.messageCount}</td>
-            <td class="messages">${formatMessageCounts(channel.users, userIdToName)}</td>
             <td>${channel.mergedCount}</td>
             <td>${channel.closedCount}</td>
             <td>${channel.reflectionCount}</td>
@@ -71,6 +67,9 @@ function populateTableAndAccordion(channels) {
             </h2>
             <div id="collapse${index}" class="accordion-collapse collapse" aria-labelledby="heading${index}" data-bs-parent="#accordion">
                 <div class="accordion-body">
+                    <p><strong>Message Count:</strong> ${channel.messageCount}</p>
+                    <p><strong>Message Breakdown:</strong></p>
+                    <pre>${formatMessageCounts(channel.users, userIdToName)}</pre>
                     ${logsHtml}
                 </div>
             </div>
@@ -84,10 +83,8 @@ document.getElementById('fileInput').addEventListener('change', function (event)
     if (file) {
         JSZip.loadAsync(file).then(function (zip) {
             const channels = {};
-            // Remove the redeclaration of userIdToName here
             const promises = [];
 
-            // Collect user info if users.json exists
             if (zip.file("users.json")) {
                 const usersPromise = zip.file("users.json").async("string").then(function (content) {
                     const users = JSON.parse(content);
@@ -95,15 +92,12 @@ document.getElementById('fileInput').addEventListener('change', function (event)
                         if (user.id && user.name) {
                             userIdToName[user.id] = user.name;
                         }
-                        else {
-                            console.error("Invalid user object: id or name is missing.");
-                        }
                     });
                 });
                 promises.push(usersPromise);
             }
             zip.forEach(function (relativePath, zipEntry) {
-                if (zipEntry.dir) return; // Skip directories
+                if (zipEntry.dir) return;
                 if (relativePath.endsWith('.json') && relativePath !== "users.json") {
                     const promise = zipEntry.async("string").then(function (content) {
                         try {
@@ -140,31 +134,23 @@ document.getElementById('fileInput').addEventListener('change', function (event)
 });
 
 function formatMessageCounts(users, userIdToName) {
-    // Ensure userIdToName is defined before attempting to access it
     if (!userIdToName) {
         return "User mapping not available";
     }
-
-    // Create an object to store aggregated message counts for each user
     const aggregatedCounts = {};
-
-    // Iterate through each user's message count and aggregate them
     Object.entries(users).forEach(([userId, count]) => {
-        const userName = userIdToName[userId] || userId; // Look up user name using user ID
+        const userName = userIdToName[userId] || userId;
         if (!aggregatedCounts[userName]) {
             aggregatedCounts[userName] = count;
         } else {
             aggregatedCounts[userName] += count;
         }
     });
-
-    // Convert the aggregated counts object to HTML string
     return Object.entries(aggregatedCounts).map(([userName, count]) => {
         return `${userName}: ${count}`;
     }).join('<br>');
 }
 
-// Filter functions
 function messageFilter(message) {
     return message;
 }
@@ -175,16 +161,12 @@ function mergedFilter(message) {
 }
 
 function closedFilter(message) {
-    // Regular expression pattern to match either "was merged" or "was :x: closed but not merged!"
     const pattern = /:thinking_face: Hello from reflection bot! :thinking_face:\s*(PR\s.*?(?=\s*(was\s*merged|:x:\s*closed but not merged)))/i;
     return message.text && pattern.test(message.text);
 }
 
 function reflectionFilter(message) {
-    // Regular expression pattern to match reflection bot messages
     const pattern = /:thinking_face: Hello from reflection bot! :thinking_face:\s*(PR\s.*?(?=\s*(was\s*merged|:x:\s*closed but not merged)))/i;
-
-    // Check if the message text matches the pattern and if there is at least one reply
     return message.text && pattern.test(message.text) && message.reply_count && message.reply_count >= 1;
 }
 
@@ -193,38 +175,26 @@ function calculateGrade(channel) {
     return denominator > 0 ? channel.reflectionCount * 100 / denominator : 0;
 }
 
-
-// Input field keyup event listener for dynamic filtering
 document.getElementById('teamFilterInput').addEventListener('keyup', function () {
     filterTable();
 });
 
 function filterTable() {
-    const input = document.getElementById('teamFilterInput').value.toLowerCase();
-    const rows = document.getElementById('dataTable').getElementsByTagName('tr');
+    const input = document.getElementById('teamFilterInput');
+    const filter = input.value.toLowerCase();
+    const table = document.getElementById('dataTable');
+    const rows = table.getElementsByTagName('tr');
 
-    for (let i = 1; i < rows.length; i++) {
-        const channelName = rows[i].getElementsByTagName('td')[0].textContent.toLowerCase();
-        if (channelName.includes(input)) {
-            rows[i].style.display = "";
+    for (let i = 1; i < rows.length; i++) { // Start at 1 to skip header row
+        const cells = rows[i].getElementsByTagName('td');
+        const channelName = cells[0].textContent.toLowerCase();
+
+        if (channelName.includes(filter)) {
+            rows[i].style.display = '';
         } else {
-            rows[i].style.display = "none";
+            rows[i].style.display = 'none';
         }
     }
-}
-
-function wrapHtml(content) {
-    // Convert the content to a JSON string and escape HTML special characters
-    const jsonString = JSON.stringify(content);
-    return jsonString.replace(/[&<>"']/g, function (match) {
-        return {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        }[match];
-    });
 }
 
 
@@ -276,4 +246,3 @@ function makeTableSortable() {
 
 // Call the function to make the table sortable
 makeTableSortable();
-

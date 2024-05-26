@@ -10,15 +10,20 @@ td {
     text-align: left;
 }
 
+/* Limit the width of the Message Count column and allow content to wrap */
+td.messages {
+    width: 150px;
+    /* Adjust the width as needed */
+    max-height: 80px;
+    /* Adjust the height as needed */
+    overflow-y: auto;
+    word-break: break-word;
+}
+
 pre {
     white-space: pre-wrap;
-    /* Since CSS 2.1 */
     white-space: -moz-pre-wrap;
-    /* Mozilla, since 1999 */
     white-space: -pre-wrap;
-    /* Opera 4-6 */
     white-space: -o-pre-wrap;
-    /* Opera 7 */
     word-wrap: break-word;
-    /* Internet Explorer 5.5+ */
 }

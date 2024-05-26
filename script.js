@@ -153,11 +153,25 @@ function formatMessageCounts(users, userIdToName) {
         return "User mapping not available";
     }
 
-    return Object.entries(users).map(([userId, count]) => {
+    // Create an object to store aggregated message counts for each user
+    const aggregatedCounts = {};
+
+    // Iterate through each user's message count and aggregate them
+    Object.entries(users).forEach(([userId, count]) => {
         const userName = userIdToName[userId] || userId; // Look up user name using user ID
+        if (!aggregatedCounts[userName]) {
+            aggregatedCounts[userName] = count;
+        } else {
+            aggregatedCounts[userName] += count;
+        }
+    });
+
+    // Convert the aggregated counts object to HTML string
+    return Object.entries(aggregatedCounts).map(([userName, count]) => {
         return `${userName}: ${count}`;
     }).join('<br>');
 }
+
 // Filter functions
 function messageFilter(message) {
     return message;

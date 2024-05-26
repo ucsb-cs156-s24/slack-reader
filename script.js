@@ -220,3 +220,54 @@ function wrapHtml(content) {
         }[match];
     });
 }
+
+
+// Function to make table columns sortable
+function makeTableSortable() {
+    const table = document.getElementById('dataTable');
+    const headers = table.querySelectorAll('th');
+
+    headers.forEach(header => {
+        header.addEventListener('click', () => {
+            const columnIndex = Array.from(headers).indexOf(header);
+            const rows = Array.from(table.querySelectorAll('tbody tr'));
+            let direction = header.dataset.sortDirection || 'asc';
+
+            // Toggle sort direction and update icon
+            if (direction === 'asc') {
+                header.querySelector('i').textContent = 'arrow_downward'; // Change icon to downward arrow
+                direction = 'desc';
+            } else {
+                header.querySelector('i').textContent = 'arrow_upward'; // Change icon to upward arrow
+                direction = 'asc';
+            }
+
+            // Sort rows based on the content of the clicked column
+            rows.sort((a, b) => {
+                const aValue = a.cells[columnIndex].textContent.trim().toLowerCase();
+                const bValue = b.cells[columnIndex].textContent.trim().toLowerCase();
+
+                if (direction === 'asc') {
+                    return aValue.localeCompare(bValue);
+                } else {
+                    return bValue.localeCompare(aValue);
+                }
+            });
+
+            // Update sort direction
+            header.dataset.sortDirection = direction;
+
+            // Clear existing table rows
+            table.querySelector('tbody').innerHTML = '';
+
+            // Append sorted rows to the table
+            rows.forEach(row => {
+                table.querySelector('tbody').appendChild(row);
+            });
+        });
+    });
+}
+
+// Call the function to make the table sortable
+makeTableSortable();
+

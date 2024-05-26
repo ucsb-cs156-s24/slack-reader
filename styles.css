@@ -27,3 +27,7 @@ pre {
     white-space: -o-pre-wrap;
     word-wrap: break-word;
 }
+
+th i {
+    display: inline-block;
+}

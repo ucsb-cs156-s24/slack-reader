@@ -1,3 +1,5 @@
+const userIdToName = {};
+
 function wrapHtml(content) {
     // Convert the content to a JSON string and escape HTML special characters
     const jsonString = JSON.stringify(content);
@@ -18,7 +20,7 @@ function processMessages(messages, channel, userIdToName) {
             channel.messageCount++;
         }
         const userId = message.user || "unknown";
-        const userName = userIdToName[userId] || userId;
+        const userName = userIdToName[userId] || userId; // Look up user name using user ID
         if (!channel.users[userName]) {
             channel.users[userName] = 0;
         }
@@ -45,7 +47,7 @@ function populateTableAndAccordion(channels) {
         row.innerHTML = `
             <td>${channelName}</td>
             <td>${channel.messageCount}</td>
-            <td class="messages">${formatMessageCounts(channel.users)}</td>
+            <td class="messages">${formatMessageCounts(channel.users, userIdToName)}</td>
             <td>${channel.mergedCount}</td>
             <td>${channel.closedCount}</td>
             <td>${channel.reflectionCount}</td>
@@ -81,7 +83,7 @@ document.getElementById('fileInput').addEventListener('change', function (event)
     if (file) {
         JSZip.loadAsync(file).then(function (zip) {
             const channels = {};
-            const userIdToName = {};
+            // Remove the redeclaration of userIdToName here
             const promises = [];
 
             // Collect user info if users.json exists
@@ -91,6 +93,9 @@ document.getElementById('fileInput').addEventListener('change', function (event)
                     users.forEach(user => {
                         if (user.id && user.name) {
                             userIdToName[user.id] = user.name;
+                        }
+                        else {
+                            console.error("Invalid user object: id or name is missing.");
                         }
                     });
                 });
@@ -133,10 +138,17 @@ document.getElementById('fileInput').addEventListener('change', function (event)
     }
 });
 
-function formatMessageCounts(users) {
-    return Object.entries(users).map(([user, count]) => `${user}: ${count}`).join('<br>');
-}
+function formatMessageCounts(users, userIdToName) {
+    // Ensure userIdToName is defined before attempting to access it
+    if (!userIdToName) {
+        return "User mapping not available";
+    }
 
+    return Object.entries(users).map(([userId, count]) => {
+        const userName = userIdToName[userId] || userId; // Look up user name using user ID
+        return `${userName}: ${count}`;
+    }).join('<br>');
+}
 // Filter functions
 function messageFilter(message) {
     return message.text && message.text.length > 0;
@@ -149,7 +161,7 @@ function mergedFilter(message) {
 
 function closedFilter(message) {
     // Regular expression pattern to match either "was merged" or "was :x: closed but not merged!"
-    const pattern = /was\s*(merged|:x:\s*closed but not merged)/i;
+    const pattern = /:thinking_face: Hello from reflection bot! :thinking_face:\s*(PR\s.*?(?=\s*(was\s*merged|:x:\s*closed but not merged)))/i;
     return message.text && pattern.test(message.text);
 }
 

@@ -15,6 +15,7 @@ function wrapHtml(content) {
 }
 
 function processMessages(messages, channel, userIdToName) {
+    //Check that messages sum up to counts of individual messages by user
     messages.forEach(message => {
         if (messageFilter(message)) {
             channel.messageCount++;
@@ -35,6 +36,14 @@ function processMessages(messages, channel, userIdToName) {
             channel.reflectionCount++;
         }
     });
+    //print channel name too
+    Object.entries(channel.users).forEach(([userName, count]) => {
+
+        if (channel.messageCount !== count) {
+            console.error(`Count of messages in channel  does not sum up to individual user count for ${userName}. Message count: ${channel.messageCount}, User count: ${count}`);
+        }
+    });
+
 }
 
 function populateTableAndAccordion(channels) {
@@ -151,7 +160,7 @@ function formatMessageCounts(users, userIdToName) {
 }
 // Filter functions
 function messageFilter(message) {
-    return message.text && message.text.length > 0;
+    return message;
 }
 
 function mergedFilter(message) {

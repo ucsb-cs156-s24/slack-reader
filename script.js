@@ -160,9 +160,3 @@ function calculateGrade(channel) {
 }
 
 
-document.addEventListener('DOMContentLoaded', function () {
-    $("#dataTable").tablesorter({
-        theme: 'bootstrap',
-        widgets: ["zebra"]
-    });
-});

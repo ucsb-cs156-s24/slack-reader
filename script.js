@@ -36,14 +36,6 @@ function processMessages(messages, channel, userIdToName) {
             channel.reflectionCount++;
         }
     });
-    //print channel name too
-    Object.entries(channel.users).forEach(([userName, count]) => {
-
-        if (channel.messageCount !== count) {
-            console.error(`Count of messages in channel  does not sum up to individual user count for ${userName}. Message count: ${channel.messageCount}, User count: ${count}`);
-        }
-    });
-
 }
 
 function populateTableAndAccordion(channels) {

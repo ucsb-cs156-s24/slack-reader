@@ -31,7 +31,7 @@ function processMessages(messages, channel, userIdToName) {
             channel.closedCount++;
         }
         if (reflectionFilter(message)) {
-            channel.reflectionCount++;
+            channel.reflectionCount += message.reply_count;
         }
     });
 }
@@ -43,10 +43,11 @@ function populateTableAndAccordion(channels) {
         const channel = channels[channelName];
         const grade = calculateGrade(channel);
         const row = document.createElement('tr');
+        const closedNotMergedCount = channel.closedCount - channel.mergedCount;
         row.innerHTML = `
             <td>${channelName}</td>
             <td>${channel.mergedCount}</td>
-            <td>${channel.closedCount}</td>
+            <td>${closedNotMergedCount}</td>
             <td>${channel.reflectionCount}</td>
             <td>${grade.toFixed(2)}</td>
         `;
@@ -172,7 +173,8 @@ function reflectionFilter(message) {
 }
 
 function calculateGrade(channel) {
-    const denominator = (channel.mergedCount * 2) + channel.closedCount;
+    const closedNotMergedCount = channel.closedCount - channel.mergedCount;
+    const denominator = (channel.mergedCount * 2) + closedNotMergedCount;
     return denominator > 0 ? channel.reflectionCount * 100 / denominator : 0;
 }
 

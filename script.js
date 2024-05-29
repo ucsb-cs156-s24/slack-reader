@@ -172,10 +172,12 @@ function reflectionFilter(message) {
     return message.text && pattern.test(message.text) && message.reply_count && message.reply_count >= 1;
 }
 
+
 function calculateGrade(channel) {
     const closedNotMergedCount = channel.closedCount - channel.mergedCount;
     const denominator = (channel.mergedCount * 2) + closedNotMergedCount;
-    return denominator > 0 ? channel.reflectionCount * 100 / denominator : 0;
+    const rawGrade = denominator > 0 ? channel.reflectionCount * 100 / denominator : 0;
+    return  (rawGrade <= 100.0) ? rawGrade : 100.0 ;
 }
 
 document.getElementById('teamFilterInput').addEventListener('keyup', function () {
@@ -297,3 +299,4 @@ function sortAccordionItems(sortedRows, columnIndex, direction) {
 
 // Call the function to make the table sortable
 makeTableSortable();
+

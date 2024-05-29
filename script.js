@@ -31,7 +31,7 @@ function processMessages(messages, channel, userIdToName) {
             channel.closedCount++;
         }
         if (reflectionFilter(message)) {
-            channel.reflectionCount++;
+            channel.reflectionCount += message.reply_count;
         }
     });
 }
@@ -43,10 +43,11 @@ function populateTableAndAccordion(channels) {
         const channel = channels[channelName];
         const grade = calculateGrade(channel);
         const row = document.createElement('tr');
+        const closedNotMergedCount = channel.closedCount - channel.mergedCount;
         row.innerHTML = `
             <td>${channelName}</td>
             <td>${channel.mergedCount}</td>
-            <td>${channel.closedCount}</td>
+            <td>${closedNotMergedCount}</td>
             <td>${channel.reflectionCount}</td>
             <td>${grade.toFixed(2)}</td>
         `;
@@ -171,9 +172,12 @@ function reflectionFilter(message) {
     return message.text && pattern.test(message.text) && message.reply_count && message.reply_count >= 1;
 }
 
+
 function calculateGrade(channel) {
-    const denominator = (channel.mergedCount * 2) + channel.closedCount;
-    return denominator > 0 ? channel.reflectionCount * 100 / denominator : 0;
+    const closedNotMergedCount = channel.closedCount - channel.mergedCount;
+    const denominator = (channel.mergedCount * 2) + closedNotMergedCount;
+    const rawGrade = denominator > 0 ? channel.reflectionCount * 100 / denominator : 0;
+    return  (rawGrade <= 100.0) ? rawGrade : 100.0 ;
 }
 
 document.getElementById('teamFilterInput').addEventListener('keyup', function () {
@@ -295,3 +299,4 @@ function sortAccordionItems(sortedRows, columnIndex, direction) {
 
 // Call the function to make the table sortable
 makeTableSortable();
+

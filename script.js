@@ -1,5 +1,5 @@
 const userIdToName = {};
-
+let channels = {};
 function wrapHtml(content) {
     const jsonString = JSON.stringify(content);
     return jsonString.replace(/[&<>"']/g, function (match) {
@@ -84,7 +84,6 @@ document.getElementById('fileInput').addEventListener('change', function (event)
     const file = event.target.files[0];
     if (file) {
         JSZip.loadAsync(file).then(function (zip) {
-            const channels = {};
             const promises = [];
 
             if (zip.file("users.json")) {
@@ -177,7 +176,7 @@ function calculateGrade(channel) {
     const closedNotMergedCount = channel.closedCount - channel.mergedCount;
     const denominator = (channel.mergedCount * 2) + closedNotMergedCount;
     const rawGrade = denominator > 0 ? channel.reflectionCount * 100 / denominator : 0;
-    return  (rawGrade <= 100.0) ? rawGrade : 100.0 ;
+    return (rawGrade <= 100.0) ? rawGrade : 100.0;
 }
 
 document.getElementById('teamFilterInput').addEventListener('keyup', function () {
@@ -300,3 +299,105 @@ function sortAccordionItems(sortedRows, columnIndex, direction) {
 // Call the function to make the table sortable
 makeTableSortable();
 
+function escapeCSV(value) {
+    if (typeof value === 'string') {
+        // Escape double quotes by doubling them and wrap the value in double quotes if it contains commas, newlines, or double quotes
+        if (value.includes(',') || value.includes('\n') || value.includes('"')) {
+            value = `"${value.replace(/"/g, '""')}"`;
+        }
+    }
+    return value;
+}
+
+function escapeCSV(value) {
+    if (typeof value === 'string') {
+        // Escape double quotes by doubling them and wrap the value in double quotes if it contains commas, newlines, or double quotes
+        if (value.includes(',') || value.includes('\n') || value.includes('"')) {
+            value = `"${value.replace(/"/g, '""')}"`;
+        }
+    }
+    return value;
+}
+
+function escapeCSV(value) {
+    if (typeof value === 'string') {
+        // Escape double quotes by doubling them and wrap the value in double quotes if it contains commas, newlines, or double quotes
+        if (value.includes(',') || value.includes('\n') || value.includes('"')) {
+            value = `"${value.replace(/"/g, '""')}"`;
+        }
+    }
+    return value;
+}
+
+function escapeCSV(value) {
+    if (typeof value === 'string') {
+        // Escape double quotes by doubling them and wrap the value in double quotes if it contains commas, newlines, or double quotes
+        if (value.includes(',') || value.includes('\n') || value.includes('"')) {
+            value = `"${value.replace(/"/g, '""')}"`;
+        }
+    }
+    return value;
+}
+
+function generateCSV() {
+    const rows = [];
+    let totalMessages = 0;
+
+    // Add table headers
+    rows.push(['Channel', 'Timestamp', 'User', 'Message ID', 'Thread ID', 'Text']);
+
+    Object.keys(channels).forEach(channelName => {
+        const channel = channels[channelName];
+        console.log(`Processing channel: ${channelName}`); // Debugging statement
+
+        channel.logs.forEach(log => {
+            log.content.forEach(message => {
+                const userName = userIdToName[message.user] || message.user || 'unknown';
+                const messageId = message.client_msg_id || message.ts || 'unknown';
+                const threadId = message.thread_ts || 'none';
+                const timestamp = message.ts ? new Date(parseFloat(message.ts) * 1000).toLocaleString() : 'unknown';
+                const text = message.text ? message.text.replace(/[\r\n]+/g, ' ') : 'No text available';
+
+                // Add message details to the CSV rows
+                rows.push([
+                    escapeCSV(channelName),
+                    escapeCSV(timestamp),
+                    escapeCSV(userName),
+                    escapeCSV(messageId),
+                    escapeCSV(threadId),
+                    escapeCSV(text)
+                ]);
+
+                totalMessages++;
+            });
+        });
+    });
+
+    console.log(`Total messages processed: ${totalMessages}`); // Debugging statement
+    console.log(`Total rows in CSV: ${rows.length}`); // Debugging statement
+    console.log(`First few rows: ${JSON.stringify(rows.slice(0, 10))}`); // Debugging statement
+
+    // Convert rows to CSV string
+    const csvContent = rows.map(row => row.join(",")).join("\n");
+
+    // Create a Blob from the CSV string
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    // Create a temporary link to download the CSV
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'slack_messages.csv');
+    document.body.appendChild(link);
+
+    // Trigger the download
+    link.click();
+
+    // Clean up
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+document.getElementById('downloadCSV').addEventListener('click', function () {
+    generateCSV();
+});

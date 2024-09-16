@@ -339,12 +339,41 @@ function escapeCSV(value) {
     return value;
 }
 
+function escapeCSV(value) {
+    if (typeof value === 'string') {
+        // Escape double quotes by doubling them and wrap the value in double quotes if it contains commas, newlines, or double quotes
+        if (value.includes(',') || value.includes('\n') || value.includes('"')) {
+            value = `"${value.replace(/"/g, '""')}"`;
+        }
+    }
+    return value;
+}
+
+function isReflection(message) {
+    // Define the user ID of the slack-bot
+    const slackBotUserId = 'U073E1ZUGG6';
+
+    // Define patterns to match reflection messages
+    const patterns = [
+        /:thinking_face: Hello from reflection bot! :thinking_face:\n PR <.*?> was merged :white_check_mark:.\n \*Each team member that was involved in this PR \(either coding or code review\)\*, please now write a brief reflection \*as a reply thread to this post\* on what you as an individual, or your team, learned from this PR, if anything\.\n Note that your team will be graded on two aspects:\n \n  \(1\) the percentage of prompts like this one to which your team responds,\n \n  \(2\) the quality of your responses\.\n\n\nSee <.*?> for details\./i,
+        /:thinking_face: Hello from reflection bot! :thinking_face:\n PR <.*?> was :x: closed but not merged! :x: \n \*Each team member that was involved in this PR \(either coding or code review\)\*, please now write a brief reflection \*as a reply thread to this post\* on what you as an individual, or your team, learned from this PR, if anything\.\n Note that your team will be graded on two aspects:\n \n  \(1\) the percentage of prompts like this one to which your team responds,\n \n  \(2\) the quality of your responses\.\n\n\nSee <.*?> for details\./i
+        // Add any other user-defined patterns here
+    ];
+
+    // Check if message is from the slack-bot
+    if (message.user !== slackBotUserId) return false;
+
+    // Check if the message text matches any of the patterns
+    return patterns.some(pattern => pattern.test(message.text));
+}
+
 function generateCSV() {
     const rows = [];
     let totalMessages = 0;
+    const reflectionThreadIds = new Set();
 
     // Add table headers
-    rows.push(['Channel', 'Timestamp', 'User', 'Message ID', 'Thread ID', 'Text']);
+    rows.push(['Channel', 'Timestamp', 'User', 'Message ID', 'Thread ID', 'Text', 'isReflection']);
 
     Object.keys(channels).forEach(channelName => {
         const channel = channels[channelName];
@@ -357,6 +386,12 @@ function generateCSV() {
                 const threadId = message.thread_ts || 'none';
                 const timestamp = message.ts ? new Date(parseFloat(message.ts) * 1000).toLocaleString() : 'unknown';
                 const text = message.text ? message.text.replace(/[\r\n]+/g, ' ') : 'No text available';
+                const isReflectionMessage = isReflection(message) ? 1 : 0;
+
+                // If the message is a reflection message, add its thread ID to the set
+                if (isReflectionMessage && threadId !== 'none') {
+                    reflectionThreadIds.add(threadId);
+                }
 
                 // Add message details to the CSV rows
                 rows.push([
@@ -365,12 +400,21 @@ function generateCSV() {
                     escapeCSV(userName),
                     escapeCSV(messageId),
                     escapeCSV(threadId),
-                    escapeCSV(text)
+                    escapeCSV(text),
+                    isReflectionMessage
                 ]);
 
                 totalMessages++;
             });
         });
+    });
+
+    // Update the isReflection column for messages that are replies to reflection messages
+    rows.forEach(row => {
+        const threadId = row[4]; // Thread ID is the 5th column
+        if (threadId !== 'none' && reflectionThreadIds.has(threadId)) {
+            row[6] = 1; // isReflection is the 7th column
+        }
     });
 
     console.log(`Total messages processed: ${totalMessages}`); // Debugging statement

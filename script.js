@@ -377,51 +377,6 @@ function escapeCSV(value) {
     return value;
 }
 
-function isReflection(message) {
-    // Define the user ID of the slack-bot
-    const slackBotUserId = 'U073E1ZUGG6';
-
-    // Define patterns to match reflection messages
-    const patterns = [
-        /:thinking_face: Hello from reflection bot! :thinking_face:\n PR <.*?> was merged :white_check_mark:.\n \*Each team member that was involved in this PR \(either coding or code review\)\*, please now write a brief reflection \*as a reply thread to this post\* on what you as an individual, or your team, learned from this PR, if anything\.\n Note that your team will be graded on two aspects:\n \n  \(1\) the percentage of prompts like this one to which your team responds,\n \n  \(2\) the quality of your responses\.\n\n\nSee <.*?> for details\./i,
-        /:thinking_face: Hello from reflection bot! :thinking_face:\n PR <.*?> was :x: closed but not merged! :x: \n \*Each team member that was involved in this PR \(either coding or code review\)\*, please now write a brief reflection \*as a reply thread to this post\* on what you as an individual, or your team, learned from this PR, if anything\.\n Note that your team will be graded on two aspects:\n \n  \(1\) the percentage of prompts like this one to which your team responds,\n \n  \(2\) the quality of your responses\.\n\n\nSee <.*?> for details\./i
-        // Add any other user-defined patterns here
-    ];
-
-    // Check if message is from the slack-bot
-    if (message.user !== slackBotUserId) return false;
-
-    // Check if the message text matches any of the patterns
-    return patterns.some(pattern => pattern.test(message.text));
-}
-
-function escapeCSV(value) {
-    if (typeof value === 'string') {
-        // Escape double quotes by doubling them and wrap the value in double quotes if it contains commas, newlines, or double quotes
-        if (value.includes(',') || value.includes('\n') || value.includes('"')) {
-            value = `"${value.replace(/"/g, '""')}"`;
-        }
-    }
-    return value;
-}
-
-function isReflection(message) {
-    // Define the user ID of the slack-bot
-    const slackBotUserId = 'U073E1ZUGG6';
-
-    // Define patterns to match reflection messages
-    const patterns = [
-        /:thinking_face: Hello from reflection bot! :thinking_face:\n PR <.*?> was merged :white_check_mark:.\n \*Each team member that was involved in this PR \(either coding or code review\)\*, please now write a brief reflection \*as a reply thread to this post\* on what you as an individual, or your team, learned from this PR, if anything\.\n Note that your team will be graded on two aspects:\n \n  \(1\) the percentage of prompts like this one to which your team responds,\n \n  \(2\) the quality of your responses\.\n\n\nSee <.*?> for details\./i,
-        /:thinking_face: Hello from reflection bot! :thinking_face:\n PR <.*?> was :x: closed but not merged! :x: \n \*Each team member that was involved in this PR \(either coding or code review\)\*, please now write a brief reflection \*as a reply thread to this post\* on what you as an individual, or your team, learned from this PR, if anything\.\n Note that your team will be graded on two aspects:\n \n  \(1\) the percentage of prompts like this one to which your team responds,\n \n  \(2\) the quality of your responses\.\n\n\nSee <.*?> for details\./i
-        // Add any other user-defined patterns here
-    ];
-
-    // Check if message is from the slack-bot
-    if (message.user !== slackBotUserId) return false;
-
-    // Check if the message text matches any of the patterns
-    return patterns.some(pattern => pattern.test(message.text));
-}
 
 function generateCSV() {
     const rows = [];
@@ -429,7 +384,7 @@ function generateCSV() {
     const reflectionThreadIds = new Set();
 
     // Add table headers
-    rows.push(['Channel', 'UTC Timestamp', 'Slack ID', 'User Name', 'Message ID', 'Thread ID', 'Text', 'isReflection']);
+    rows.push(['Channel', 'UTC Timestamp', 'Slack ID', 'User Name', 'Message ID', 'Thread Parent ID', 'Thread Role', 'Text', 'isReflection']);
 
     Object.keys(channels).forEach(channelName => {
         const channel = channels[channelName];
@@ -439,15 +394,39 @@ function generateCSV() {
             log.content.forEach(message => {
                 const userId = message.user || 'unknown';
                 const userName = userIdToName[userId] || 'unknown';
-                const messageId = message.client_msg_id || message.ts || 'unknown';
-                const threadId = message.thread_ts || 'none';
+                
+                // Use client_msg_id as the proper message ID, or generate a unique one
+                const messageId = message.client_msg_id || `generated-${userId}-${message.ts}`;
+                
+                // Thread handling - properly identify parent vs child messages
+                let threadParentId = 'none';
+                let threadRole = 'standalone';
+                
+                if (message.thread_ts) {
+                    threadParentId = message.thread_ts;
+                    if (message.ts === message.thread_ts) {
+                        threadRole = 'parent'; // This is a thread parent/starter
+                    } else {
+                        threadRole = 'reply';  // This is a reply in a thread
+                    }
+                }
+                
+                // Rest of the code remains the same
                 const utcTimestamp = message.ts ? new Date(parseFloat(message.ts) * 1000).toISOString() : 'unknown';
-                const text = message.text ? message.text.replace(/[\r\n]+/g, ' ') : 'No text available';
+                const text = message.text 
+                    ? message.text.replace(/[\r\n]+/g, ' ') 
+                    : message.files && message.files.length > 0
+                        ? `[File: ${message.files[0].name || message.files[0].title || 'attachment'} (Type: ${message.files[0].pretty_type || message.files[0].filetype || 'unknown'})${message.files[0].permalink ? ' - ' + message.files[0].permalink : ''}]`
+                        : message.file && (message.file.url_private || message.file.url_private_download)
+                            ? `[File: ${message.file.name || 'attachment'} (Type: ${message.file.pretty_type || message.file.filetype || 'unknown'})${message.file.permalink ? ' - ' + message.files[0].permalink : ''}]`
+                            : message.attachments && message.attachments.length > 0 && message.attachments[0].url
+                                ? `[URL: ${message.attachments[0].url}]`
+                                : 'No text available';
                 const isReflectionMessage = isReflection(message) ? 1 : 0;
 
-                // If the message is a reflection message, add its thread ID to the set
-                if (isReflectionMessage && threadId !== 'none') {
-                    reflectionThreadIds.add(threadId);
+                // If the message is a reflection message, add its thread parent ID to the set
+                if (isReflectionMessage && threadParentId !== 'none') {
+                    reflectionThreadIds.add(threadParentId);
                 }
 
                 // Add message details to the CSV rows
@@ -457,7 +436,8 @@ function generateCSV() {
                     escapeCSV(userId),
                     escapeCSV(userName),
                     escapeCSV(messageId),
-                    escapeCSV(threadId),
+                    escapeCSV(threadParentId),
+                    escapeCSV(threadRole),
                     escapeCSV(text),
                     isReflectionMessage
                 ]);
@@ -481,9 +461,12 @@ function generateCSV() {
     // Convert rows to CSV string
     const csvContent = rows.map(row => row.join(",")).join("\n");
 
-    // Create a Blob from the CSV string
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    // Add UTF-8 BOM at the beginning of the file
+    const BOM = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const csvWithBOM = new Blob([BOM, csvContent], { type: 'text/csv;charset=utf-8' });
+
+    // Create a Blob from the CSV string with BOM
+    const url = URL.createObjectURL(csvWithBOM);
 
     // Create a temporary link to download the CSV
     const link = document.createElement('a');
